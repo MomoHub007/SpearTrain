@@ -637,7 +637,7 @@ task.spawn(function()
                     task.wait(0.1)
                     timeout = timeout + 0.1
                     if cashStat.Value > oldCash then
-                        task.wait(1) 
+                        task.wait(3) 
                         break 
                     end
                 end
