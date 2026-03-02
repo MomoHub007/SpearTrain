@@ -27,7 +27,7 @@ local claimGiftRemote = remotes:WaitForChild("ClaimGift")
 local claimQuestEggRemote = remotes:WaitForChild("ClaimQuestEgg")
 local usePotionRemote = remotes:WaitForChild("UsePotion")
 
--- ดึงข้อมูลโซนและไข่ (เพิ่มโซน Space เรียบร้อย)
+-- ดึงข้อมูลโซนและไข่
 local zones = {"City", "Carnival", "Beach", "Candy", "Space"}
 local eggList = {}
 pcall(function()
@@ -118,13 +118,13 @@ local function CheckAndSave()
 end
 
 -- ==========================================
--- ระบบ Black Screen Boost FPS (อัปเดตใหม่ ให้เห็น UI)
+-- ระบบ Black Screen Boost FPS
 -- ==========================================
 local CoreGui = game:GetService("CoreGui")
 local BlackScreenGui = Instance.new("ScreenGui")
 BlackScreenGui.Name = "MoMoBlackScreen"
 BlackScreenGui.IgnoreGuiInset = true 
-BlackScreenGui.DisplayOrder = -9999 -- ปรับให้ติดลบ เพื่อให้จอดำอยู่หลัง UI ทุกอย่างในเกม
+BlackScreenGui.DisplayOrder = -9999 
 local bsSuccess, _ = pcall(function() BlackScreenGui.Parent = CoreGui end)
 if not bsSuccess then BlackScreenGui.Parent = player:WaitForChild("PlayerGui") end
 
@@ -181,21 +181,44 @@ end
 playerGui.DescendantAdded:Connect(handleNotifs)
 
 -- ==========================================
--- ฟังก์ชันหาเป้าหมายการฝึกที่ดีที่สุด
+-- ฟังก์ชันหาเป้าหมายการฝึกที่ดีที่สุด (อัปเดตระบบเช็ค Power_2 สำหรับ Space)
 -- ==========================================
 local function getBestTarget()
     local leaderstats = player:FindFirstChild("leaderstats")
-    if not leaderstats or not leaderstats:FindFirstChild("Power") then return nil end
-    local currentPower = leaderstats.Power.Value
+    if not leaderstats then return nil end
+    
+    local safeConfigZone = string.lower(string.match(tostring(MoMoConfig.TrainZone), "^%s*(.-)%s*$"))
+    local currentPower = 0
+    
+    -- เช็คค่าพลังแยกตามโลก (World 2 ใช้ Power_2)
+    if safeConfigZone == "space" then
+        if leaderstats:FindFirstChild("Power_2") then
+            currentPower = leaderstats.Power_2.Value
+        else
+            return nil -- ยังไม่มี Power_2 แปลว่าอาจจะยังปลดล็อคไปไม่ถึง หรือข้อมูลยังไม่โหลด
+        end
+    else
+        if leaderstats:FindFirstChild("Power") then
+            currentPower = leaderstats.Power.Value
+        else
+            return nil
+        end
+    end
+
     local bestName, highestReq = nil, -1
     
     for _, target in pairs(Workspace.Targets:GetChildren()) do
         local req = target:GetAttribute("Required")
         local zone = target:GetAttribute("Zone")
-        if req and type(req) == "number" and zone == MoMoConfig.TrainZone then
-            if currentPower >= req and req > highestReq then
-                highestReq = req
-                bestName = target.Name
+        
+        if req and type(req) == "number" and zone then
+            local safeZone = string.lower(string.match(tostring(zone), "^%s*(.-)%s*$"))
+            
+            if safeZone == safeConfigZone then
+                if currentPower >= req and req > highestReq then
+                    highestReq = req
+                    bestName = target.Name
+                end
             end
         end
     end
@@ -209,7 +232,7 @@ local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/x2zu/
 
 local Window = Library:Window({
     Title = "MoMoHub",
-    Desc = "v1.0 - SpearTraining",
+    Desc = "Welcome to The best script hub",
     Icon = "badge-check",
     Theme = "Amethyst",
     Color = Color3.fromRGB(170, 0, 255),
@@ -583,9 +606,11 @@ do
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
             if tick() - clickTime < 0.2 then
-                VirtualUser:SendKeyEvent(true, Enum.KeyCode.LeftControl, false, game)
-                task.wait(0.05)
-                VirtualUser:SendKeyEvent(false, Enum.KeyCode.LeftControl, false, game)
+                pcall(function()
+                    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.LeftControl, false, game)
+                    task.wait(0.05)
+                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.LeftControl, false, game)
+                end)
             end
         end
     end)
@@ -637,7 +662,7 @@ task.spawn(function()
                     task.wait(0.1)
                     timeout = timeout + 0.1
                     if cashStat.Value > oldCash then
-                        task.wait(3) 
+                        task.wait(1) 
                         break 
                     end
                 end
